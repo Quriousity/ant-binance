@@ -32,7 +32,8 @@
     {
         "key": ,
         "secret": ,
-        "symbol": "BTCUSDT"
+        "symbol": "BTCUSDT",
+        "tp": 0.0015
     }
     ```
     ### ./data/discordWebhook.json
