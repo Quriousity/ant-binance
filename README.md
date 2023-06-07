@@ -32,7 +32,7 @@
     {
         "key": ,
         "secret": ,
-        "symbol": "BTCUSDT",
+        "symbol": "BTCUSDT"
     }
     ```
     ### ./data/discordWebhook.json
