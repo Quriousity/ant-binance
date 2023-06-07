@@ -19,9 +19,10 @@ with open('./data/conf.json') as f:
 key = conf['key']
 secret = conf['secret']
 symbol = conf['symbol']
+tp = conf['tp']
 client = UMFutures(key=key, secret=secret)
 t = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
-print(t, symbol, 'Start!')
+print(t, symbol, tp, 'Start!')
 # Discord
 with open('./data/discordWebhook.json') as fr:
     conf = json.load(fr)
@@ -68,12 +69,12 @@ def openPosition():
         with open("./data/switchOpenPosition.pickle", "rb") as fr:
             switchOpenPosition = pickle.load(fr)
         if switchOpenPosition == 1:
-            quantity = getAvailableQty(client, symbol)
             df = getCandleRecent(client, symbol, '1m', 60)
             vma = df['volume'].ewm(60).mean()
             volumePeak = df['volume'][-1]/vma[-1]
             position = df['close'][-1] - df['open'][-1]
             if volumePeak > 10:
+                quantity = getAvailableQty(client, symbol)
                 if position > 0:
                     openLongMarket(client, symbol, quantity)
                     message = '{} {} {}'.format(symbol, t, 'Open Long')
@@ -106,7 +107,7 @@ def closePosition():
             # Order (Close Long)
             if newPositions[1] != 0:
                 qty = newPositions[1]
-                price = round(newPositions[0]*1.001, 1)
+                price = round(newPositions[0]*(1+tp), 1)
 
                 orderLong = closeLong(client, symbol, qty, price)
 
@@ -124,7 +125,7 @@ def closePosition():
             # Order (Close Short)
             if newPositions[3] != 0:
                 qty = -newPositions[3]
-                price = round(newPositions[2]*0.999, 1)
+                price = round(newPositions[2]*(1-tp), 1)
 
                 orderShort = closeShort(client, symbol, qty, price)
 
