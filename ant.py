@@ -27,6 +27,7 @@ print(t, symbol, tp, 'Start!')
 with open('./data/discordWebhook.json') as fr:
     conf = json.load(fr)
 hook = conf['URL']
+hook2 = conf['bizzy']
 if hook:
     print('Discord is ON!')
 
@@ -61,126 +62,59 @@ with open("./data/shortAntClose.pickle", "wb") as fw:
 
 
 def openPosition():
-    t = datetime.now()
-    if t.second == 0 or t.second == 1:
-        pass
-    else:
-        t = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
-        with open("./data/switchOpenPosition.pickle", "rb") as fr:
-            switchOpenPosition = pickle.load(fr)
-        if switchOpenPosition == 1:
-            df = getCandleRecent(client, symbol, '1m', 60)
-            vma = df['volume'].ewm(60).mean()
-            volumePeak = df['volume'][-1]/vma[-1]
-            position = df['close'][-1] - df['open'][-1]
-            if volumePeak > 10:
-                quantity = getAvailableQty(client, symbol)
-                if position > 0:
-                    openLongMarket(client, symbol, quantity)
-                    message = '{} {} {}'.format(symbol, t, 'Open Long')
-                    print(message)
-                    requests.post(hook, {'content': message})
-                elif position < 0:
-                    openShortMarket(client, symbol, quantity)
-                    message = '{} {} {}'.format(symbol, t, 'Open Short')
-                    print(message)
-                    requests.post(hook, {'content': message})
-                switchOpenPosition = 0
-                with open("./data/switchOpenPosition.pickle", "wb") as fw:
-                    pickle.dump(switchOpenPosition, fw)
-                switchClosePosition = 1
-                with open("./data/switchClosePosition.pickle", "wb") as fw:
-                    pickle.dump(switchClosePosition, fw)
-                    
-
-def closePosition():
-    with open("./data/switchClosePosition.pickle", "rb") as fr:
-        switchClosePosition = pickle.load(fr)
-    if switchClosePosition == 1:
-        t = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
-        with open("./data/currentPositions.pickle", "rb") as fr:
-            currentPositions = pickle.load(fr)
-        newPositions = getPositions(client)
-
-        if currentPositions != newPositions:
-            client.cancel_open_orders('BTCUSDT')
-            # Order (Close Long)
-            if newPositions[1] != 0:
-                qty = newPositions[1]
-                price = round(newPositions[0]*(1+tp), 1)
-
-                orderLong = closeLong(client, symbol, qty, price)
-
-                longAnt = closeLongAnt()
-                longAnt.orderId = orderLong['orderId']
-                longAnt.size = qty
-                longAnt.price = price
-
-                with open("./data/longAntClose.pickle", "wb") as fw:
-                    pickle.dump(longAnt, fw)
-
-                message = '{} {} {}'.format(symbol, t, 'Close Long (Submitted)')
-                print(message)
-
-            # Order (Close Short)
-            if newPositions[3] != 0:
-                qty = -newPositions[3]
-                price = round(newPositions[2]*(1-tp), 1)
-
-                orderShort = closeShort(client, symbol, qty, price)
-
-                shortAnt = closeShortAnt()
-                shortAnt.orderId = orderShort['orderId']
-                shortAnt.size = qty
-                shortAnt.price = price
-
-                with open("./data/shortAntClose.pickle", "wb") as fw:
-                    pickle.dump(shortAnt, fw)
-
-                message = '{} {} {}'.format(symbol, t, 'Close Short (Submitted)')
-                print(message)
-
-            with open("./data/currentPositions.pickle", "wb") as fw:
-                pickle.dump(newPositions, fw)
-            switchClosePosition = 0
-            with open("./data/switchClosePosition.pickle", "wb") as fw:
-                pickle.dump(switchClosePosition, fw)
-            switchCheckClose = 1
-            with open("./data/switchCheckClose.pickle", "wb") as fw:
-                pickle.dump(switchCheckClose, fw)
-
-def checkClose():
-    with open("./data/switchCheckClose.pickle", "rb") as fr:
-        switchCheckClose = pickle.load(fr)
-    if switchCheckClose == 1:
-        t = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
-        with open("./data/longAntClose.pickle", "rb") as fr:
-            longAnt = pickle.load(fr)
-            if longAnt.orderId != 0:
-                if checkOrderStatus(client, symbol, longAnt.orderId) == 'FILLED':
-                    sleep(50)
-                    longAnt.orderId = 0
-                    with open("./data/longAntClose.pickle", "wb") as fw:
-                        pickle.dump(longAnt, fw)
-                    longAntOpen = openLongAnt()
-                    with open("./data/longAntOpen.pickle", "wb") as fw:
-                        pickle.dump(longAntOpen, fw)
-
-                    message = '{} {} {}'.format(symbol, t, 'Close Long')
-                    print(message)
-                    requests.post(hook, {'content': message})
-                    switchCheckClose = 0
-                    with open("./data/switchCheckClose.pickle", "wb") as fw:
-                        pickle.dump(switchCheckClose, fw)
-                    switchOpenPosition = 1
+    try:
+        t = datetime.now()
+        if t.second == 0 or t.second == 1:
+            pass
+        else:
+            t = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+            with open("./data/switchOpenPosition.pickle", "rb") as fr:
+                switchOpenPosition = pickle.load(fr)
+            if switchOpenPosition == 1:
+                df = getCandleRecent(client, symbol, '1m', 60)
+                vma = df['volume'].ewm(60).mean()
+                volumePeak = df['volume'][-1]/vma[-1]
+                position = df['close'][-1] - df['open'][-1]
+                if volumePeak > 10:
+                    quantity = getAvailableQty(client, symbol)
+                    if position > 0:
+                        openLongMarket(client, symbol, quantity)
+                        message = '{} {} {}'.format(symbol, t, 'Open Long')
+                        print(message)
+                        requests.post(hook, {'content': message})
+                    elif position < 0:
+                        openShortMarket(client, symbol, quantity)
+                        message = '{} {} {}'.format(symbol, t, 'Open Short')
+                        print(message)
+                        requests.post(hook, {'content': message})
+                    switchOpenPosition = 0
                     with open("./data/switchOpenPosition.pickle", "wb") as fw:
                         pickle.dump(switchOpenPosition, fw)
-                else:
-                    qty, price = getCloseInfomation(client, symbol, longAnt.orderId)
-                    price = round(price*0.9999, 1)
-                    client.cancel_open_orders('BTCUSDT')
+                    switchClosePosition = 1
+                    with open("./data/switchClosePosition.pickle", "wb") as fw:
+                        pickle.dump(switchClosePosition, fw)
+    except:                    
+        requests.post(hook2, {'content': 'openPosition has a problem'})
+
+def closePosition():
+    try:
+        with open("./data/switchClosePosition.pickle", "rb") as fr:
+            switchClosePosition = pickle.load(fr)
+        if switchClosePosition == 1:
+            t = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+            with open("./data/currentPositions.pickle", "rb") as fr:
+                currentPositions = pickle.load(fr)
+            newPositions = getPositions(client)
+
+            if currentPositions != newPositions:
+                client.cancel_open_orders('BTCUSDT')
+                # Order (Close Long)
+                if newPositions[1] != 0:
+                    qty = newPositions[1]
+                    price = round(newPositions[0]*(1+tp), 1)
 
                     orderLong = closeLong(client, symbol, qty, price)
+
                     longAnt = closeLongAnt()
                     longAnt.orderId = orderLong['orderId']
                     longAnt.size = qty
@@ -189,36 +123,16 @@ def checkClose():
                     with open("./data/longAntClose.pickle", "wb") as fw:
                         pickle.dump(longAnt, fw)
 
-                    message = '{} {} {}'.format(symbol, t, 'Close Long (Changed)')
+                    message = '{} {} {}'.format(symbol, t, 'Close Long (Submitted)')
                     print(message)
 
-        with open("./data/shortAntClose.pickle", "rb") as fr:
-            shortAnt = pickle.load(fr)
-            if shortAnt.orderId != 0:
-                if checkOrderStatus(client, symbol, shortAnt.orderId) == 'FILLED':
-                    sleep(50)
-                    shortAnt.orderId = 0
-                    with open("./data/shortAntClose.pickle", "wb") as fw:
-                        pickle.dump(shortAnt, fw)
-                    shortAntOpen = openShortAnt()
-                    with open("./data/shortAntOpen.pickle", "wb") as fw:
-                        pickle.dump(shortAntOpen, fw)
-
-                    message = '{} {} {}'.format(symbol, t, 'Close Short')
-                    print(message)
-                    requests.post(hook, {'content': message})
-                    switchCheckClose = 0
-                    with open("./data/switchCheckClose.pickle", "wb") as fw:
-                        pickle.dump(switchCheckClose, fw)
-                    switchOpenPosition = 1
-                    with open("./data/switchOpenPosition.pickle", "wb") as fw:
-                        pickle.dump(switchOpenPosition, fw)
-                else:
-                    qty, price = getCloseInfomation(client, symbol, shortAnt.orderId)
-                    price = round(price*1.0001, 1)
-                    client.cancel_open_orders('BTCUSDT')
+                # Order (Close Short)
+                if newPositions[3] != 0:
+                    qty = -newPositions[3]
+                    price = round(newPositions[2]*(1-tp), 1)
 
                     orderShort = closeShort(client, symbol, qty, price)
+
                     shortAnt = closeShortAnt()
                     shortAnt.orderId = orderShort['orderId']
                     shortAnt.size = qty
@@ -227,8 +141,103 @@ def checkClose():
                     with open("./data/shortAntClose.pickle", "wb") as fw:
                         pickle.dump(shortAnt, fw)
 
-                    message = '{} {} {}'.format(symbol, t, 'Close Short (Changed)')
+                    message = '{} {} {}'.format(symbol, t, 'Close Short (Submitted)')
                     print(message)
+
+                with open("./data/currentPositions.pickle", "wb") as fw:
+                    pickle.dump(newPositions, fw)
+                switchClosePosition = 0
+                with open("./data/switchClosePosition.pickle", "wb") as fw:
+                    pickle.dump(switchClosePosition, fw)
+                switchCheckClose = 1
+                with open("./data/switchCheckClose.pickle", "wb") as fw:
+                    pickle.dump(switchCheckClose, fw)
+    except:
+        requests.post(hook2, {'content': 'closePosition has a problem'})
+
+def checkClose():
+    try:
+        with open("./data/switchCheckClose.pickle", "rb") as fr:
+            switchCheckClose = pickle.load(fr)
+        if switchCheckClose == 1:
+            t = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+            with open("./data/longAntClose.pickle", "rb") as fr:
+                longAnt = pickle.load(fr)
+                if longAnt.orderId != 0:
+                    if checkOrderStatus(client, symbol, longAnt.orderId) == 'FILLED':
+                        sleep(50)
+                        longAnt.orderId = 0
+                        with open("./data/longAntClose.pickle", "wb") as fw:
+                            pickle.dump(longAnt, fw)
+                        longAntOpen = openLongAnt()
+                        with open("./data/longAntOpen.pickle", "wb") as fw:
+                            pickle.dump(longAntOpen, fw)
+
+                        message = '{} {} {}'.format(symbol, t, 'Close Long')
+                        print(message)
+                        requests.post(hook, {'content': message})
+                        switchCheckClose = 0
+                        with open("./data/switchCheckClose.pickle", "wb") as fw:
+                            pickle.dump(switchCheckClose, fw)
+                        switchOpenPosition = 1
+                        with open("./data/switchOpenPosition.pickle", "wb") as fw:
+                            pickle.dump(switchOpenPosition, fw)
+                    else:
+                        qty, price = getCloseInfomation(client, symbol, longAnt.orderId)
+                        price = round(price*0.9999, 1)
+                        client.cancel_open_orders('BTCUSDT')
+
+                        orderLong = closeLong(client, symbol, qty, price)
+                        longAnt = closeLongAnt()
+                        longAnt.orderId = orderLong['orderId']
+                        longAnt.size = qty
+                        longAnt.price = price
+
+                        with open("./data/longAntClose.pickle", "wb") as fw:
+                            pickle.dump(longAnt, fw)
+
+                        message = '{} {} {}'.format(symbol, t, 'Close Long (Changed)')
+                        print(message)
+
+            with open("./data/shortAntClose.pickle", "rb") as fr:
+                shortAnt = pickle.load(fr)
+                if shortAnt.orderId != 0:
+                    if checkOrderStatus(client, symbol, shortAnt.orderId) == 'FILLED':
+                        sleep(50)
+                        shortAnt.orderId = 0
+                        with open("./data/shortAntClose.pickle", "wb") as fw:
+                            pickle.dump(shortAnt, fw)
+                        shortAntOpen = openShortAnt()
+                        with open("./data/shortAntOpen.pickle", "wb") as fw:
+                            pickle.dump(shortAntOpen, fw)
+
+                        message = '{} {} {}'.format(symbol, t, 'Close Short')
+                        print(message)
+                        requests.post(hook, {'content': message})
+                        switchCheckClose = 0
+                        with open("./data/switchCheckClose.pickle", "wb") as fw:
+                            pickle.dump(switchCheckClose, fw)
+                        switchOpenPosition = 1
+                        with open("./data/switchOpenPosition.pickle", "wb") as fw:
+                            pickle.dump(switchOpenPosition, fw)
+                    else:
+                        qty, price = getCloseInfomation(client, symbol, shortAnt.orderId)
+                        price = round(price*1.0001, 1)
+                        client.cancel_open_orders('BTCUSDT')
+
+                        orderShort = closeShort(client, symbol, qty, price)
+                        shortAnt = closeShortAnt()
+                        shortAnt.orderId = orderShort['orderId']
+                        shortAnt.size = qty
+                        shortAnt.price = price
+
+                        with open("./data/shortAntClose.pickle", "wb") as fw:
+                            pickle.dump(shortAnt, fw)
+
+                        message = '{} {} {}'.format(symbol, t, 'Close Short (Changed)')
+                        print(message)
+    except:
+        requests.post(hook2, {'content': 'checkClose has a problem'})
 
 # 스케줄 등록
 schedule.every(1).seconds.do(openPosition)
